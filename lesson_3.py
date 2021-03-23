@@ -55,7 +55,7 @@ def eval_LR_model(X, y, iterations, alpha=1e-4):
             print(i, w, logloss_err, mse_err)
     return w
 
-eval_LR_model(X, y, 800)
+eval_LR_model(X_st, y, 800)
 print(1)
 #3 Создайте функцию calc_pred_proba, возвращающую предсказанную вероятность класса 1 (на вход подаются веса, которые уже посчитаны функцией eval_LR_model и X, на выходе - массив y_pred_proba).
 #4 Создайте функцию calc_pred, возвращающую предсказанный класс (на вход подаются веса, которые уже посчитаны функцией eval_LR_model и X, на выходе - массив y_pred).
