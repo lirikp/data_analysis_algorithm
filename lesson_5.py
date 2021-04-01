@@ -7,8 +7,8 @@ from sklearn import datasets
 import numpy as np
 
 # сгенерируем данные, представляющие собой 500 объектов с 5-ю признаками
-classification_data, classification_labels = datasets.make_classification(n_samples=500,
-                                                                          n_features=5, n_informative=5,
+classification_data, classification_labels = datasets.make_classification(n_samples=100,
+                                                                          n_features=2, n_informative=2,
                                                                           n_classes=2, n_redundant=0,
                                                                           n_clusters_per_class=1, random_state=23)
 
@@ -34,7 +34,7 @@ def get_bootstrap(data, labels, N):
             sample_index = random.randint(0, n_samples - 1)
             b_data[j] = data[sample_index]
             b_labels[j] = labels[sample_index]
-            #mask[j]
+            # mask[j]
         bootstrap.append((b_data, b_labels))
 
     return bootstrap
@@ -235,6 +235,7 @@ train_data, test_data, train_labels, test_labels = model_selection.train_test_sp
                                                                                     test_size=0.3,
                                                                                     random_state=1)
 
+
 # Введем функцию подсчета точности как доли правильных ответов
 def accuracy_metric(actual, predicted):
     correct = 0
@@ -244,15 +245,68 @@ def accuracy_metric(actual, predicted):
     return correct / float(len(actual)) * 100.0
 
 
-n_trees = 10
-my_forest_1 = random_forest(train_data, train_labels, n_trees)
-# Получим ответы для обучающей выборки
-train_answers = tree_vote(my_forest_1, train_data)
-# И получим ответы для тестовой выборки
-test_answers = tree_vote(my_forest_1, test_data)
-# Точность на обучающей выборке
-train_accuracy = accuracy_metric(train_labels, train_answers)
-print(f'Точность случайного леса из {n_trees} деревьев на обучающей выборке: {train_accuracy:.3f}')
-# Точность на тестовой выборке
-test_accuracy = accuracy_metric(test_labels, test_answers)
-print(f'Точность случайного леса из {n_trees} деревьев на тестовой выборке: {test_accuracy:.3f}')
+def any_forest(n_trees, *args, **kwargs):
+    # Визуализируем дерево на графике
+    def get_meshgrid(data, step=.05, border=1.2):
+        x_min, x_max = data[:, 0].min() - border, data[:, 0].max() + border
+        y_min, y_max = data[:, 1].min() - border, data[:, 1].max() + border
+        return np.meshgrid(np.arange(x_min, x_max, step), np.arange(y_min, y_max, step))
+
+    forest = random_forest(kwargs['train_data'], kwargs['train_labels'], n_trees)
+
+    train_accuracy = accuracy_metric(kwargs['train_labels'], tree_vote(forest, kwargs['train_data']))
+    print(f'Точность случайного леса из {n_trees} деревьев на обучающей выборке: {train_accuracy:.3f}')
+    # Точность на тестовой выборке
+    test_accuracy = accuracy_metric(kwargs['test_labels'], tree_vote(forest, kwargs['test_data']))
+    print(f'Точность случайного леса из {n_trees} деревьев на тестовой выборке: {test_accuracy:.3f}')
+
+    plt.figure(figsize=(16, 7))
+
+    # график обучающей выборки
+    plt.subplot(1, 2, 1)
+    xx, yy = get_meshgrid(train_data)
+    mesh_predictions = np.array(tree_vote(forest, np.c_[xx.ravel(), yy.ravel()])).reshape(xx.shape)
+    plt.pcolormesh(xx, yy, mesh_predictions, cmap=light_colors, shading='auto')
+    plt.scatter(train_data[:, 0], train_data[:, 1], c=train_labels, cmap=colors)
+    plt.title(f'Train accuracy={train_accuracy:.2f}')
+
+    # график тестовой выборки
+    plt.subplot(1, 2, 2)
+    plt.pcolormesh(xx, yy, mesh_predictions, cmap=light_colors, shading='auto')
+    plt.scatter(test_data[:, 0], test_data[:, 1], c=test_labels, cmap=colors)
+    plt.title(f'Test accuracy={test_accuracy:.2f}')
+    plt.show()
+
+    return test_accuracy
+
+
+level_trees = {}
+for n_trees in [1, 3, 5, 7, 10, 12, 15, 30, 50, 100]:
+    level_trees[n_trees] = any_forest(n_trees, train_data=train_data, test_data=test_data, train_labels=train_labels,
+                                      test_labels=test_labels)
+
+plt.plot(level_trees.keys(), level_trees.values())
+plt.show()
+# Точность случайного леса из 1 деревьев на обучающей выборке: 97.143
+# Точность случайного леса из 1 деревьев на тестовой выборке: 80.000
+# Точность случайного леса из 3 деревьев на обучающей выборке: 97.143
+# Точность случайного леса из 3 деревьев на тестовой выборке: 80.000
+# Точность случайного леса из 5 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 5 деревьев на тестовой выборке: 83.333
+# Точность случайного леса из 7 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 7 деревьев на тестовой выборке: 86.667
+# Точность случайного леса из 10 деревьев на обучающей выборке: 95.714
+# Точность случайного леса из 10 деревьев на тестовой выборке: 90.000
+# Точность случайного леса из 12 деревьев на обучающей выборке: 98.571
+# Точность случайного леса из 12 деревьев на тестовой выборке: 86.667
+# Точность случайного леса из 15 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 15 деревьев на тестовой выборке: 86.667
+# Точность случайного леса из 30 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 30 деревьев на тестовой выборке: 86.667
+# Точность случайного леса из 50 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 50 деревьев на тестовой выборке: 86.667
+# Точность случайного леса из 100 деревьев на обучающей выборке: 100.000
+# Точность случайного леса из 100 деревьев на тестовой выборке: 86.667
+
+#Вывод: При росте количества деревьев, наблюдается локализация площадей для точек конкретного "цвета", а так же явное сечение плоскости на 2 половины.
+#При росте количства деревьев на участке от 9 до 12 есть нарастающий пик точности модели, и далее после 15 низпадающее выравнивание на определённой величине (86.6).
